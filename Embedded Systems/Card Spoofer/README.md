@@ -5,17 +5,11 @@ This project is a card emulator that sends a card’s magnetic strip (1st and 2n
 
 ## Materials
 - LaunchPad MSP432P401R Board
-
 - Jumper Wire M/F 6” 20 Pieces
-
 - Switch Keypad 12 Key Non-ILLUM
-
 - USB Swipe Magnetic Credit Card Reader
-
 - 830 Point Solderless Breadboard 3PCS
-
 - 22 AWG Magnet Wire - Enameled Copper Wire
-
 - Logic Gate Optocoupler
 
 
