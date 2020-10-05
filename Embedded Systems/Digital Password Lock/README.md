@@ -1,6 +1,6 @@
 # Digital Password Lock
 
-## DESCRIPTION
+## Description
 This lock is a keypad lock that starts off in the locked stage. Once the correct 4 digit pin has been entered the lock unlocks. Once in the unlocked stage, the user can press the # button to reset their pin and will be prompted to insert a new 4 digit pin. After the new pin has been inserted, the lock will lock. In the unlocked stage pressing any button besides the ‘#’ will return the user to the locked stage with the same pin. If the user inserts the wrong pin 3 times in a row they will get put in timeout for 10 seconds before being brought back to the locked stage to attempt guesses at the pin. Lastly in the locked stage if the user presses the ‘*’ it will clear their input and will not count as an attempt. 
 
 ## Materials
