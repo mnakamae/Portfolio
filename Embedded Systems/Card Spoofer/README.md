@@ -1,6 +1,6 @@
 # Card Spoofer
 
-## DESCRIPTION
+## Description
 This project is a card emulator that sends a card’s magnetic strip (1st and 2nd tracks only) as a string through the UART to the MSP432. The MSP432 then generates electrical outputs that drive an optoisolator which in turn drives our inductor. Magnetic stripes are read through the changes in the surrounding magnetic field around the card reader. The voltages output from the MSP432 induced changes in the magnetic field near the card reader, which effectively tricks the card reader into scanning a “card”. As a result, the card reader will read the information sent from our inductor and write it to a text document.
 
 ## Materials
