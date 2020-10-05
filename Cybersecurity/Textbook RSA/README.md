@@ -1,10 +1,10 @@
 # Textbook RSA
 
-## DESCRIPTION
+## Description
 This project looks closely at RSA protocols and the relation between both public and private key pairs. The most notable equations for this portion of the assignment are the encryption [E(m) = m<sup>e</sup> mod n] and decryption [m(c) = c<sup>d</sup> mod n] equations given public (e, n) and private (d, n) key pairs. I also explored malleability attacks in which attackers are allowed to create their own ciphertexts due to the mathematical properties of the encryption/decryption algorithms. As a result, it is very important to also use padding when using any RSA schemes. Both the public and private keys are derived from randomly generated prime numbers, p and q.
 
 
-## INSTRUCTIONS
+## Instructions
 Note that the library PyCrypto was used to implement this solution. To run enter the following into a terminal:
 
 python3 RSA.py
