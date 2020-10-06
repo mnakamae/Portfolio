@@ -1,0 +1,173 @@
+#!/bin/csh -f 
+
+set class=cpe453
+set classdir=pn-cs453
+set asgn=asgn1
+set tmpdir="$cwd"/.try$asgn.$$
+set maketarget="intel-all"
+
+if ( `hostname` == "angora.home" || `hostname -s` == "lagniappe" ) then
+  set lib=/home/pnico/CalPoly/Class/$class/now/Asgn/Handin/lib/$asgn
+  set logprog=/bin/echo
+  set longlines=/home/pnico/bin/longlines.pl
+else
+  if ( -d $classdir/bin ) then
+    set path=($path $classdir/bin )
+  endif
+  if ( -d ~pnico/bin ) then
+    set path=($path ~pnico/bin )
+  endif
+  set lib=/home/$classdir/lib/$asgn/
+  set logprog=/home/$classdir/bin/logit.$asgn
+  set longlines=/home/$classdir/bin/longlines.pl
+endif
+
+set testdir=$lib/testlib
+set exitstatus = 0
+set which = -1
+onintr bail
+
+
+if ( $?GRADINGMODE ) then
+  echo "(Grading mode.  Skipping build.)"
+else
+  # Only try to build if GRADINGMODE isn't set
+  if ( $exitstatus == 0 ) then
+    echo ""
+    echo "------------------------"
+    echo "Looking for source files"
+    echo "------------------------"
+    echo ""
+
+    set nonomatch
+    set src = ( *.[ch] )
+    if ( "$src" != '*.[ch]' ) then
+
+      echo "Found: $src"
+    else
+      echo "***** No C source files found. " 
+      echo "***** Are you sure you're in the right directory?"
+      echo ""
+      set exitstatus = -1
+    endif
+  endif
+
+  if ( $exitstatus == 0 ) then
+    echo ""
+    echo "-----------------------"
+    echo "Looking for a Makefile"
+    echo "----------------------"
+    echo ""
+
+    if ( $exitstatus == 0 ) then
+      if ( -f Makefile ) then
+        echo "Found: Makefile"
+      else if ( -f makefile ) then 
+        echo "Found: makefile"
+      else 
+        echo ""
+        echo "***** No Makefile found."
+        echo ""
+        set exitstatus = -2
+      endif
+    endif
+  endif
+
+  if ( $exitstatus == 0 ) then
+    echo ""
+    echo "--------------------------------"
+    echo "Checking for long lines (no program should have any lines > 80 chars)"
+    echo "--------------------------------"
+    echo ""
+    if ( ! { $longlines $src } ) then
+       set exitstatus=-3
+    else
+       echo "Line length ok."
+    endif
+    echo ""
+  endif
+
+  if ( $exitstatus == 0 ) then
+    echo ""
+    echo "------------------------------------"
+    echo "Building the application:" \"make $maketarget\"
+    echo "------------------------------------"
+    echo ""
+
+    set cmd = ( make $maketarget )
+    echo "$cmd" 
+    if ( ! { $cmd  } ) then
+      echo ""
+      echo "Build failed."
+      set exitstatus = -4
+    endif
+  endif
+  
+  if ( $exitstatus == 0 ) then
+    echo ""
+    echo "---------------"
+    echo "checking for libraries"
+    echo "---------------"
+    echo ""
+
+    foreach f ( lib/libmalloc.so lib64/libmalloc.so ) 
+      if ( ! -f $f ) then
+        echo "$f not found"
+        set exitstatus = -5
+      endif
+    end
+
+  endif
+endif
+
+#===================================================================
+#below this is where most customization should happen
+#===================================================================
+
+set testlib=/home/pnico
+if ( $exitstatus == 0 ) then
+    setenv TESTLIB $lib/testlib
+    setenv OUTDIR "$tmpdir"
+    set path=($path /home/pnico/bin)
+    if ( ! -x $lib/testmalloc ) then
+        echo "Unable to locate testmalloc."
+	set exitstatus=-1
+    else
+  	echo ""
+  	echo "--------------------------------------------------------"
+  	echo "Test Results:"
+  	echo "   These are the results of trying your libraries"   
+  	echo "against several programs with different characteristics "     
+  	echo "described by the filename.  The output of your program"
+  	echo "is compared to a reference output using diff(1).  If they"
+  	echo "differ, the test case is a failure."
+  	echo ""
+  	echo "  Remember, if the machine you're running on _really_ "
+  	echo "runs out of memory, it's possible for a test to fail"
+  	echo "without it being your program's fault.  (there'd better"
+  	echo "be a good error message, though)"
+  	echo ""
+	$lib/testmalloc
+	set exitstatus=$status
+    endif
+endif
+
+#===================================================================
+
+goto done
+
+bail:
+  echo "Interrupted."
+  set exitstatus=-7
+
+done:
+
+if ( -e "$tmpdir" && ! $?KEEPOUTPUT ) then
+  rm -rf "$tmpdir"
+endif
+
+if ( -x $logprog ) then
+  $logprog $exitstatus $which
+endif
+
+exit $exitstatus
