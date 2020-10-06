@@ -28,17 +28,12 @@ void create_header_file(int tfile, char *pathname, struct stat *buf, struct usta
    int err = 0;
 
    create_name_prefix(pathname, header);
-   /*write(tfile, header->name, sizeof(char) * 100);*/
 
    sprintf(header->mode, "%07ho", (unsigned short) (buf->st_mode & 0x1ff)); /* write mode */
-   /*write(tfile, header->mode, sizeof(char) * 8);*/
 
    err = insert_special_int(header->uid, 7, buf->st_uid);
-   /*sprintf(header->uid, "%07o", buf->st_uid);  write uid */
-   /*write(tfile, header->uid, sizeof(char) * 8);*/
 
    sprintf(header->gid, "%07o", buf->st_gid); /* write gid */
-   /*write(tfile, header->gid, sizeof(char) * 8);*/
 
    if(S_ISREG(m)){ /* write size and typeflag */
       sprintf(header->size, "%011lo", (long) buf->st_size); /* write size of regular file */
@@ -78,14 +73,6 @@ void create_header_file(int tfile, char *pathname, struct stat *buf, struct usta
 
    grp = getgrgid(getgid()); /* write gname */
    strcpy(header->gname, grp->gr_name);
-   /*write(tfile, header->gname, sizeof(char) * 32);*/
-
-   /*write(tfile, header->devmajor, sizeof(char) * 8);
-   write(tfile, header->devminor, sizeof(char) * 8);
-
-   write(tfile, header->prefix, sizeof(char) * 155);
-
-   write(tfile, header->padding, sizeof(char) * 12);*/
 
    get_chksum(header);
 }
