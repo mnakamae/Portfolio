@@ -16,12 +16,6 @@ int main(int argc, char *argv[]){
    struct ustar_header header;
    char path[SIZE];
 
-   /*printf("%d\n", argc);
-   while(i < argc){
-      printf("%s\n", argv[i]);
-      i++;
-   }*/
-
    if(argc > 1)
       flags = check_flags_fcvtxs(argv[1]);
 
