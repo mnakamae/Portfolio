@@ -1,0 +1,334 @@
+#!/bin/csh -f 
+
+set class=cpe453
+set classdir=pn-cs453
+set asgn=asgn2
+set maketarget=liblwp.so
+
+if ( `hostname` == "aloha.home" || `hostname` == "lagniappe.csc.calpoly.edu" ) then
+  set lib=$HOME/CalPoly/Class/$class/now/Asgn/Handin/lib/$asgn
+  set logprog=/bin/echo
+  set longlines=$HOME/bin/longlines.pl
+else
+  if ( -d $classdir/bin ) then
+    set path=($path $classdir/bin )
+  endif
+  if ( -d ~pnico/bin ) then
+    set path=($path ~pnico/bin )
+  endif
+  set lib=/home/$classdir/lib/$asgn/
+  set logprog=/home/$classdir/bin/logit.$asgn
+  set longlines=/home/$classdir/bin/longlines.pl
+endif
+
+set testdir=$lib/testlib
+set exitstatus = 0
+set which = -1
+onintr bail
+
+
+if ( $?GRADINGMODE ) then
+  echo "(Grading mode.  Skipping build.)"
+else
+  # Only try to build if GRADINGMODE isn't set
+  if ( $exitstatus == 0 ) then
+    echo ""
+    echo "------------------------"
+    echo "Looking for source files"
+    echo "------------------------"
+    echo ""
+
+    set nonomatch
+    set src = ( *.[ch] )
+    if ( "$src" != '*.[ch]' ) then
+
+      echo "Found: $src"
+    else
+      echo "***** No C source files found. " 
+      echo "***** Are you sure you're in the right directory?"
+      echo ""
+      set exitstatus = -1
+    endif
+  endif
+
+  if ( $exitstatus == 0 ) then
+    echo ""
+    echo "-----------------------"
+    echo "Looking for a Makefile"
+    echo "----------------------"
+    echo ""
+
+    if ( $exitstatus == 0 ) then
+      if ( -f Makefile ) then
+        echo "Found: Makefile"
+      else if ( -f makefile ) then 
+        echo "Found: makefile"
+      else 
+        echo ""
+        echo "***** No Makefile found."
+        echo ""
+        set exitstatus = -2
+      endif
+    endif
+  endif
+
+  if ( $exitstatus == 0 ) then
+    echo ""
+    echo "--------------------------------"
+    echo "Checking for long lines (no program should have any lines > 80 chars)"
+    echo "--------------------------------"
+    echo ""
+    if ( ! { $longlines $src } ) then
+       set exitstatus=-3
+    else
+       echo "Line length ok."
+    endif
+    echo ""
+  endif
+
+  if ( $exitstatus == 0 ) then
+    echo ""
+    echo "------------------------------------"
+    echo "Building the application:" \"make $maketarget\"
+    echo "------------------------------------"
+    echo ""
+
+    set cmd = ( make $maketarget )
+    echo "$cmd" 
+    if ( ! { $cmd  } ) then
+      echo ""
+      echo "Build failed."
+      set exitstatus = -4
+    endif
+  endif
+  
+  if ( $exitstatus == 0 ) then
+    echo ""
+    echo "---------------"
+    echo "checking for $maketarget"
+    echo "---------------"
+    echo ""
+
+    if ( ! -f $maketarget ) then
+      echo "$maketarget not found"
+      set exitstatus = -5
+    endif
+  endif
+endif
+
+#===================================================================
+#below this is where most customization should happen
+#===================================================================
+
+# if ( $exitstatus == 0 ) then
+#   #First, convert the given static library into a dynamic one
+#   set srclib=liblwp.a
+#   set dstlib=$srclib:r.so
+
+#   if ( ! -f $srclib ) then
+#     echo ""
+#     echo "Unable to locate $srclib."
+#     echo ""
+#     @ exitstatus++
+#   else
+#     # try and build the shared library
+#     if ( ! -d $tmpdir ) then
+#       mkdir $tmpdir
+#     endif
+
+#     cd $tmpdir
+#     if ( ! { ar x ../$srclib } ) then
+#       echo ""
+#       echo "Unable to extract objects from $srclib."
+#       echo ""
+#       @ exitstatus++
+#     else
+#       if ( { ( file *.o | grep -q 64-bit ) > /dev/null } ) then
+#         echo ""
+#         echo "*** Found 64-bit object(s) in $srclib.  Be sure you are compiling"
+#         echo "    with -m32."
+#         echo ""
+# 	@ exitstatus++
+#       else if ( ! { gcc -m32 -shared -o $dstlib *.o } ) then
+#         echo ""
+#         echo "Unable to build $dstlib."
+#         echo ""
+#         @ exitstatus++
+#       endif
+#     endif
+#   endif
+# endif
+
+# test it.
+
+
+if ( $exitstatus == 0 ) then
+  echo ""
+  echo "--------------------------------------------------------"
+  echo "Test Results:"
+  echo "   These are the results of trying your $maketarget"   
+  echo "against several programs with different characteristics "     
+  echo "described by the filename.  The output of your program"
+  echo "is compared to a reference output using diff(1).  If they"
+  echo "differ, the test case is a failure."
+  echo ""
+
+
+  #===================================================================
+
+  set detailfile=DETAILS
+
+  # time out after 1 minute
+  set timeout=60
+  set maxlines=4096
+  set maxchars=131072
+  set iolimit= ( iolimit $maxlines $maxchars )
+  set sfile=t_script.$$
+
+  limit filesize 1M
+  limit coredumpsize 1M
+
+
+  # LD_LIBRARY_PATH for use below
+  if ( $?LD_LIBRARY_PATH ) then
+     set libpath=.:{$LD_LIBRARY_PATH}
+  else 
+     set libpath=.
+  endif
+
+  if ( -f $detailfile ) then
+    mv $detailfile $detailfile.bak
+    touch $detailfile
+  endif
+
+  #Now perform the tests if all is well
+  set passed=0
+  set tests=0
+  set this=1
+  set which=0
+
+  if ( ! $exitstatus ) then
+    setenv LD_LIBRARY_PATH $libpath
+    echo ""
+    echo "Testing (failure details below):"
+    echo "        -----"
+    foreach testdir ( $testdir/[0-9]* ) 
+#     foreach testdir ( $testdir/04* ) 
+      if ( ! -d $testdir ) continue
+  #set verbose
+      @ tests++
+      set prog = $testdir:t
+      set ref  = $testdir/$prog.expected
+      set out  = $prog.out 
+      if ( -f $testdir/Description ) then
+         set title=`head -1 $testdir/Description`
+      else 
+         set title=$prog
+      endif
+      printf "        %2d) %-45.45s ... " $tests "$title"
+
+      set cmd = "$testdir/$prog | $iolimit 2>&1"
+      (setenv SHELL /bin/sh; \
+    	    script -q -c "timelimit $timeout $cmd" $sfile) >& /dev/null
+      #PLN
+#      set host=`hostname  -s`
+#      set fname=`printf '../script.%02d.%s' $tests $host`
+#      cp $sfile $fname
+      #NLP
+
+      # transform the script to an outfile.  It seems that some versins
+      # of script(1) are quieter than others with -1
+      if ( { grep -q "Script started" $sfile } ) then
+        tail -n +2 $sfile | tr -d '\r' > $out
+      else
+        cat $sfile | tr -d '\r' > $out
+      endif   
+
+
+      if ( { ( diff $ref $out > /dev/null ) } ) then 
+          echo "ok."                                
+          @ passed++
+       else                                                  
+          echo "FAILURE."                           
+          @ exitstatus++;
+     	@ which += $this
+  	# on failure, preserve the details
+  	echo "=================================================" >> $detailfile
+  	echo -n "TEST "$tests": "		   >> $detailfile
+          if ( -f $testdir/Description ) then
+              cat $testdir/Description >> $detailfile
+          else 
+              echo $title >> $detailfile
+          endif
+  	echo ""		   >> $detailfile
+  	echo "----------" >> $detailfile
+  	echo "Reference:"   >> $detailfile
+  	echo "----------" >> $detailfile
+  	cat $ref >> $detailfile
+  	echo "----------" >> $detailfile
+  	echo "Submitted:"   >> $detailfile
+  	echo "----------" >> $detailfile
+  	cat $out >> $detailfile
+  	echo ""		   >> $detailfile
+  	echo "---------------------------------" >> $detailfile
+  	echo "Differences (< reference > output)"   >> $detailfile
+  	echo "---------------------------------" >> $detailfile
+  	echo ""		   >> $detailfile
+          diff $ref $out >> $detailfile
+  	echo "---------"   >> $detailfile
+      endif
+      rm -f $out $sfile
+      @ this *= 2
+    end
+  endif
+
+  echo "        -----"
+  if ( ! $exitstatus ) then
+    echo "Success. ($passed/$tests passed)"
+  else
+    echo "FAILURE. ($passed/$tests passed)"
+  endif
+  echo ""
+
+  # check for corefiles
+
+  set cores = `ls | egrep '^core(\.[0-9]+)?$'`
+  if ( $#cores ) then
+     echo ""                                      
+     echo "----------------------------"          
+     if ( $#cores == 1 ) then       
+       echo $#cores" Corefile Present:"           
+     else
+       echo $#cores" Corefile(s) Present:"        
+     endif
+     foreach f ( $cores ) 
+       echo "    $f"                              
+     end
+     echo "----------------------------"          
+     echo ""                                      
+  endif
+
+
+  if ( $passed != $tests ) then
+    echo ""
+    echo "-----------------------------------------------------------------"
+    echo "Failure Details"
+    echo "-----------------------------------------------------------------"
+    cat $detailfile
+  endif
+endif
+#===================================================================
+
+goto done
+
+bail:
+  echo "Interrupted."
+  set exitstatus=-7
+  
+done:
+
+if ( -x $logprog ) then
+  $logprog $exitstatus $which
+endif
+killall -q -u `whoami` -r pn-cs453/lib 
+exit $exitstatus
